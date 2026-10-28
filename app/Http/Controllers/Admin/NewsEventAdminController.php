@@ -8,8 +8,10 @@ use App\Http\Requests\UpdateNewsEventRequest;
 use App\Models\NewsEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 
 class NewsEventAdminController extends Controller
 {
@@ -18,7 +20,7 @@ class NewsEventAdminController extends Controller
         $items = NewsEvent::query()
             ->when($request->filled('category'), fn ($query) => $query->where('category', $request->string('category')))
             ->orderByDesc('item_date')
-            ->paginate(10)
+            ->paginate(5)
             ->withQueryString();
 
         return view('admin.news.index', [
@@ -40,7 +42,7 @@ class NewsEventAdminController extends Controller
         $data = $request->safe()->except('image');
         $data['is_published'] = $request->boolean('is_published');
         $data['slug'] = NewsEvent::uniqueSlug($data['title']);
-        $data['image'] = $request->file('image')->store('news-events', 'public');
+        $data['image'] = $this->storeImage($request->file('image'));
 
         NewsEvent::query()->create($data);
 
@@ -62,15 +64,19 @@ class NewsEventAdminController extends Controller
         $data = $request->safe()->except('image');
         $data['is_published'] = $request->boolean('is_published');
         $data['slug'] = NewsEvent::uniqueSlug($data['title'], $news_event->id);
+        $oldImage = $news_event->image;
+        $newImage = null;
 
         if ($request->hasFile('image')) {
-            if ($news_event->image && ! str_starts_with($news_event->image, 'http')) {
-                Storage::disk('public')->delete($news_event->image);
-            }
-            $data['image'] = $request->file('image')->store('news-events', 'public');
+            $newImage = $this->storeImage($request->file('image'));
+            $data['image'] = $newImage;
         }
 
         $news_event->update($data);
+
+        if ($newImage && $oldImage && ! str_starts_with($oldImage, 'http')) {
+            Storage::disk('public')->delete($oldImage);
+        }
 
         return redirect()
             ->route('admin.news-events.index')
@@ -88,5 +94,16 @@ class NewsEventAdminController extends Controller
         return redirect()
             ->route('admin.news-events.index')
             ->with('success', 'Item deleted.');
+    }
+
+    private function storeImage(UploadedFile $image): string
+    {
+        $path = $image->store('news-events', 'public');
+
+        if (! $path) {
+            throw new RuntimeException('The uploaded image could not be saved.');
+        }
+
+        return $path;
     }
 }
