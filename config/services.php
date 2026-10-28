@@ -37,6 +37,7 @@ return [
 
     'crm' => [
         'webhook_url' => env('CRM_WEBHOOK_URL'),
+        'api_key' => env('HUBSPOT_API_KEY'),
     ],
 
 ];

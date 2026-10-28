@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showErrors({ message: ['Unable to send right now. Please try again.'] });
         } finally {
             submit.disabled = false;
-            submit.textContent = 'Send enquiry';
+            submit.textContent = 'Book My Visit';
         }
     });
 });

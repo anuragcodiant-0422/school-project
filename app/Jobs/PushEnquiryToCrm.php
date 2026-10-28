@@ -27,60 +27,70 @@ class PushEnquiryToCrm implements ShouldQueue
     public function handle(): void
     {
         $url = config('services.crm.webhook_url');
+        $apiKey = config('services.crm.api_key');
+        info('Pushing enquiry to CRM', [
+            'enquiry_id' => $this->enquiry->id,
+            'url' => $url,
+        ]);
 
-        // if (! $url) {
-        //     $this->enquiry->update([
-        //         'crm_status' => 'failed',
-        //         'crm_response' => 'CRM_WEBHOOK_URL is not configured.',
-        //     ]);
+        if (! $url || ! $apiKey) {
+            $missingSetting = ! $url ? 'CRM_WEBHOOK_URL' : 'HUBSPOT_API_KEY';
+            $this->enquiry->update([
+                'crm_status' => 'failed',
+                'crm_response' => $missingSetting.' is not configured.',
+            ]);
 
-        //     Log::warning('CRM webhook skipped: URL missing.', [
-        //         'enquiry_id' => $this->enquiry->id,
-        //     ]);
+            Log::warning('HubSpot contact sync skipped: configuration missing.', [
+                'enquiry_id' => $this->enquiry->id,
+                'setting' => $missingSetting,
+            ]);
 
-        //     return;
-        // }
+            return;
+        }
 
-        // try {
-        //     $response = Http::timeout(5)
-        //         ->acceptJson()
-        //         ->asJson()
-        //         ->post($url, [
-        //             'enquiry_id' => $this->enquiry->id,
-        //             'parent_name' => $this->enquiry->parent_name,
-        //             'student_name' => $this->enquiry->student_name,
-        //             'class_applying_for' => $this->enquiry->class_applying_for,
-        //             'mobile' => $this->enquiry->mobile,
-        //             'email' => $this->enquiry->email,
-        //             'message' => $this->enquiry->message,
-        //             'submitted_at' => $this->enquiry->created_at?->toIso8601String(),
-        //             'source' => 'school-website',
-        //         ]);
+        try {
+            $parentName = preg_split('/\s+/', trim($this->enquiry->parent_name), 2);
+            $properties = array_filter([
+                'firstname' => $parentName[0] ?? '',
+                'lastname' => $parentName[1] ?? '',
+                'email' => $this->enquiry->email,
+                'phone' => $this->enquiry->mobile,
+            ], static fn (?string $value): bool => $value !== null && $value !== '');
 
-        //     if ($response->successful()) {
-        //         $this->enquiry->update([
-        //             'crm_status' => 'sent',
-        //             'crm_response' => mb_substr($response->body(), 0, 2000),
-        //         ]);
+            $response = Http::withToken($apiKey)
+                ->timeout(5)
+                ->acceptJson()
+                ->asJson()
+                ->post($url, ['properties' => $properties]);
 
-        //         return;
-        //     }
+            if ($response->successful()) {
+                info('CRM webhook request successful.', [
+                    'enquiry_id' => $this->enquiry->id,
+                    'response' => $response->json(),
+                ]);
 
-            // Log::error('CRM webhook returned an error response.', [
-            //     'enquiry_id' => $this->enquiry->id,
-            //     'status' => $response->status(),
-            //     'body' => $response->body(),
-            // ]);
+                $this->enquiry->update([
+                    'crm_status' => 'sent',
+                    'crm_response' => mb_substr((string) $response->json('id'), 0, 2000),
+                ]);
 
-        //    throw new \RuntimeException('CRM webhook failed with HTTP '.$response->status());
-        // } catch (Throwable $exception) {
-        //     Log::error('CRM webhook request failed.', [
-        //         'enquiry_id' => $this->enquiry->id,
-        //         'error' => $exception->getMessage(),
-        //     ]);
+                return;
+            }
 
-        //     throw $exception;
-        // }
+            Log::error('CRM webhook returned an error response.', [
+                'enquiry_id' => $this->enquiry->id,
+                'status' => $response->status(),
+            ]);
+
+            throw new \RuntimeException('HubSpot contact sync failed with HTTP '.$response->status());
+        } catch (Throwable $exception) {
+            Log::error('HubSpot contact sync request failed.', [
+                'enquiry_id' => $this->enquiry->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     public function failed(?Throwable $exception): void

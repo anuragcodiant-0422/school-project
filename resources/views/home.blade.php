@@ -187,9 +187,9 @@
     </div>
 </section>
 
-<section class="section" id="enquire">
-    <div class="container-site split-2">
-        <div>
+<section class="section enquiry-section" id="enquire">
+    <div class="container-site split-2 enquiry-layout">
+        <div class="enquiry-faq">
             <p class="kicker">Questions parents ask</p>
             <h2 class="section-title">Let’s make the first visit easy</h2>
             @foreach ([
@@ -239,10 +239,11 @@
                         <div class="field-error" data-error="message"></div>
                     </div>
                 </div>
-                <button class="btn-main mt-3 w-100" type="submit" id="enquirySubmit">Send enquiry</button>
+                <button class="btn-main mt-3 w-100" type="submit" id="enquirySubmit">Book My Visit</button>
             </form>
         </div>
     </div>
+    <img class="enquiry-mascot" src="{{ asset('images/enquiry-child.png') }}" alt="" aria-hidden="true">
 </section>
 
 <section class="section section-soft" id="campus">

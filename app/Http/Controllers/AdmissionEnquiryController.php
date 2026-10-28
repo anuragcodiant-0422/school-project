@@ -33,7 +33,7 @@ class AdmissionEnquiryController extends Controller
             'crm_status' => 'pending',
         ]);
 
-      //  PushEnquiryToCrm::dispatch($enquiry);
+        PushEnquiryToCrm::dispatch($enquiry);
 
         try {
             Mail::to(config('school.admissions_email'))->queue(new NewEnquiryAlert($enquiry));

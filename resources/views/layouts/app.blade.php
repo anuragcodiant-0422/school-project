@@ -14,6 +14,29 @@
 </head>
 <body>
     <header class="site-header">
+        <div class="utility-bar">
+            <div class="container-site utility-bar-inner">
+                <div class="campus-switcher" aria-label="Campus locations">
+                    <span class="campus-option">Greater Noida West</span>
+                    <span class="campus-option active">{{ config('school.campus') }}</span>
+                </div>
+                <div class="utility-actions">
+                    <a class="utility-phone" href="tel:{{ preg_replace('/[^0-9+]/', '', config('school.phone')) }}">
+                        Front office · {{ config('school.phone') }}
+                    </a>
+                    <span class="utility-link">Pay fees</span>
+                    <span class="utility-link">Careers</span>
+                    <div class="utility-social" aria-hidden="true">
+                        <span>f</span>
+                        <span class="instagram-icon">◎</span>
+                        <svg viewBox="0 0 16 16" focusable="false">
+                            <path d="M6.5 4.5 11 8l-4.5 3.5z" fill="currentColor"></path>
+                            <rect x="1" y="2" width="14" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="container-site nav-row">
             <a class="brand" href="{{ route('home') }}">
                 <span class="brand-mark">M</span>
