@@ -14,27 +14,20 @@
 
 <section class="section">
     <div class="container-site">
-        <div class="filter-row">
-            <a class="{{ $category === '' ? 'active' : '' }}" href="{{ route('news-events.index') }}">All</a>
+        <div class="filter-row" id="newsFilters">
+            <a class="{{ $category === '' ? 'active' : '' }}" href="{{ route('news-events.index') }}" @if ($category === '') aria-current="true" @endif>All</a>
             @foreach ($categories as $cat)
-                <a class="{{ $category === $cat ? 'active' : '' }}" href="{{ route('news-events.index', ['category' => $cat]) }}">{{ $cat }}</a>
+                <a class="{{ $category === $cat ? 'active' : '' }}" href="{{ route('news-events.index', ['category' => $cat]) }}" @if ($category === $cat) aria-current="true" @endif>{{ $cat }}</a>
             @endforeach
         </div>
-        <div class="card-grid">
-            @forelse ($items as $item)
-                <a class="photo-card" href="{{ route('news-events.show', $item->slug) }}">
-                    <img src="{{ $item->image_url }}" alt="{{ $item->title }}">
-                    <div class="body">
-                        <div class="event-meta">{{ $item->category }} · {{ $item->item_date->format('d M Y') }}</div>
-                        <h4>{{ $item->title }}</h4>
-                        <p>{{ $item->short_description }}</p>
-                    </div>
-                </a>
-            @empty
-                <p>No published items in this category yet.</p>
-            @endforelse
+        <div id="newsListing" aria-busy="false">
+            @include('news.partials.listing', ['items' => $items])
         </div>
-        <div class="mt-4 d-flex justify-content-center">{{ $items->links() }}</div>
+        <p id="newsListingStatus" class="news-listing-status" role="status" aria-live="polite" hidden></p>
     </div>
 </section>
 @endsection
+
+@push('scripts')
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+@endpush

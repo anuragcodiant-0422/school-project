@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\NewsEvent;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\View\View;
 
 class NewsEventController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|HttpResponse
     {
         $category = $request->string('category')->toString();
 
@@ -23,11 +24,17 @@ class NewsEventController extends Controller
             ->paginate(6)
             ->withQueryString();
 
-        return view('news.index', [
+        $data = [
             'items' => $items,
             'category' => $category,
             'categories' => NewsEvent::CATEGORIES,
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return response()->view('news.partials.listing', $data);
+        }
+
+        return view('news.index', $data);
     }
 
     public function show(string $slug): View

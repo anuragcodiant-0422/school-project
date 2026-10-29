@@ -365,6 +365,9 @@ a { text-decoration: none; color: inherit; }
     padding: 8px 16px; border-radius: 999px; background: #fff; border: 1px solid #eadfea; font-weight: 800; color: var(--navy);
 }
 .filter-row a.active, .filter-row a:hover { background: var(--pink); color: #fff; border-color: var(--pink); }
+#newsListing[aria-busy="true"] { opacity: .55; transition: opacity .15s ease; }
+.news-listing-status { margin: 16px 0 0; color: var(--muted); font-weight: 700; text-align: center; }
+.news-listing-status[hidden] { display: none; }
 
 .split-2 { display: grid; grid-template-columns: .9fr 1.1fr; gap: 28px; }
 .faq-item {
