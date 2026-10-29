@@ -21,4 +21,16 @@ class ExampleTest extends TestCase
             ->assertSeeText('Pay fees')
             ->assertSeeText('Careers');
     }
+
+    public function test_assets_follow_https_forwarded_by_the_local_tunnel(): void
+    {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+            'HTTP_X_FORWARDED_HOST' => 'demo.ngrok-free.dev',
+            'HTTP_X_FORWARDED_PORT' => '443',
+        ])->get('/')
+            ->assertOk()
+            ->assertSee('https://demo.ngrok-free.dev/css/app.css');
+    }
 }

@@ -7,22 +7,30 @@ use App\Http\Requests\UpdateEnquiryStatusRequest;
 use App\Models\AdmissionEnquiry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EnquiryAdminController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|Response
     {
         $enquiries = $this->filteredQuery($request)
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.enquiries.index', [
+        $data = [
             'enquiries' => $enquiries,
             'statuses' => AdmissionEnquiry::STATUSES,
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return response()->view('admin.enquiries.partials.listing', $data);
+        }
+
+        return view('admin.enquiries.index', $data);
     }
 
     public function updateStatus(UpdateEnquiryStatusRequest $request, AdmissionEnquiry $enquiry): JsonResponse

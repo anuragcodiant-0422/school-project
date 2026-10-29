@@ -77,6 +77,142 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('popstate', () => loadListing(window.location.href, false));
+
+        const $enquiryListing = $('#enquiryListing');
+        const $enquiryStatus = $('#enquiryListingStatus');
+        let enquiryRequest = null;
+        let searchTimer = null;
+
+        const updateExportLink = () => {
+            const form = document.getElementById('enquiryFilters');
+            const exportLink = document.getElementById('enquiryExport');
+            if (!form || !exportLink) {
+                return;
+            }
+
+            const url = new URL(exportLink.href);
+            url.search = new URLSearchParams(new FormData(form)).toString();
+            exportLink.href = url.toString();
+        };
+
+        const loadEnquiries = (url, updateHistory = true) => {
+            if (enquiryRequest) {
+                enquiryRequest.abort();
+            }
+
+            $enquiryListing.attr('aria-busy', 'true');
+            $enquiryStatus.text('Loading admission enquiries...').prop('hidden', false);
+
+            const request = $.ajax({
+                url,
+                method: 'GET',
+                dataType: 'html',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            enquiryRequest = request;
+
+            request
+                .done((html) => {
+                    if (enquiryRequest !== request) {
+                        return;
+                    }
+
+                    $enquiryListing.html(html);
+                    const currentUrl = new URL(url, window.location.href);
+                    const filters = document.getElementById('enquiryFilters');
+                    filters.elements.q.value = currentUrl.searchParams.get('q') || '';
+                    filters.elements.status.value = currentUrl.searchParams.get('status') || '';
+                    updateExportLink();
+
+                    if (updateHistory) {
+                        window.history.pushState({}, '', currentUrl);
+                    }
+                    $enquiryStatus.text('').prop('hidden', true);
+                })
+                .fail((xhr, textStatus) => {
+                    if (textStatus !== 'abort' && enquiryRequest === request) {
+                        $enquiryStatus
+                            .text('Unable to load enquiries. Please try again.')
+                            .prop('hidden', false);
+                    }
+                })
+                .always(() => {
+                    if (enquiryRequest === request) {
+                        $enquiryListing.attr('aria-busy', 'false');
+                        enquiryRequest = null;
+                    }
+                });
+        };
+
+        $(document).on('submit', '#enquiryFilters', function (event) {
+            event.preventDefault();
+            window.clearTimeout(searchTimer);
+
+            const url = new URL(this.action, window.location.href);
+            url.search = new URLSearchParams(new FormData(this)).toString();
+            updateExportLink();
+            loadEnquiries(url.href);
+        });
+
+        $(document).on('input', '#enquiryFilters [name="q"]', function () {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => $('#enquiryFilters').trigger('submit'), 300);
+        });
+
+        $(document).on('change', '#enquiryFilters [name="status"]', () => {
+            $('#enquiryFilters').trigger('submit');
+        });
+
+        $(document).on('click', '#enquiryListing .pagination a', function (event) {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
+                return;
+            }
+
+            const url = new URL(this.href, window.location.href);
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            event.preventDefault();
+            loadEnquiries(url.href);
+        });
+
+        $(document).on('change', '#enquiryListing .status-select', function () {
+            const select = this;
+            const $select = $(select);
+            const originalStatus = $select.data('saved-status') || $select.data('original-status');
+            const status = $select.val();
+            $select.prop('disabled', true);
+
+            $.ajax({
+                url: `/admin/enquiries/${select.dataset.id}/status`,
+                method: 'PATCH',
+                contentType: 'application/json',
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                data: JSON.stringify({ status }),
+            })
+                .done(() => {
+                    $select.data('saved-status', status);
+                    $select.data('original-status', status);
+                })
+                .fail(() => {
+                    $select.val(originalStatus);
+                    $enquiryStatus
+                        .text('Could not update enquiry status. Please try again.')
+                        .prop('hidden', false);
+                })
+                .always(() => $select.prop('disabled', false));
+        });
+
+        window.addEventListener('popstate', () => {
+            if (document.getElementById('enquiryListing')) {
+                loadEnquiries(window.location.href, false);
+            }
+        });
     }
 
     const navToggle = document.getElementById('navToggle');
